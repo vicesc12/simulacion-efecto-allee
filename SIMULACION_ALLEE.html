@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador - Efecto Allee</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1e3c72;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+        .team-names {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 8px;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        .presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background-color: #2a5298;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #1e3c72;
+        }
+        .btn-extincion { background-color: #e74c3c; }
+        .btn-extincion:hover { background-color: #c0392b; }
+        .btn-suave { background-color: #27ae60; }
+        .btn-suave:hover { background-color: #1e8449; }
+        .btn-oscila { background-color: #f39c12; }
+        .btn-oscila:hover { background-color: #d68910; }
+        .btn-caos { background-color: #8e44ad; }
+        .btn-caos:hover { background-color: #732d91; }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        .chart-box {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .status-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Simulador del Efecto Allee</h1>
+    <div style="text-align: center; font-family: 'Crimson Pro', 'Georgia', serif; font-size: 2.2rem; margin: 10px 0; color: #1e3c72;">
+    <i>x</i><sub>n+1</sub> = <i>x</i><sub>n</sub> + 
+    <span style="color: #f39c12;"><i>a</i></span><i>x</i><sub>n</sub>
+    (<i>x</i><sub>n</sub> - <span style="color: #e74c3c;"><i>b</i></span>)
+    (1 - <i>x</i><sub>n</sub>)
+</div>
+    <p class="team-names">Desarrollado por: Iván, Pablo, José Francisco y Víctor</p>
+    
+    <div class="presets">
+        <button class="btn-extincion" onclick="setParams(0.3, 2.0, 0.4, 25)">Caso 1: Extinción (x₀ < b)</button>
+        <button class="btn-suave" onclick="setParams(0.3, 1.5, 0.2, 50)">Caso 2: Crecimiento Suave</button>
+        <button class="btn-oscila" onclick="setParams(0.3, 3.8, 0.2, 50)">Caso 3: Oscilaciones</button>
+        <button class="btn-caos" onclick="setParams(0.3, 6.5, 0.2, 50)">Caso 4: Caos</button>
+    </div>
+
+    <div class="controls-grid">
+        <div class="control-group">
+            <label for="x0">Población inicial (x₀): <span id="x0-val">0.30</span></label>
+            <input type="range" id="x0" min="0.01" max="0.99" step="0.01" value="0.3">
+        </div>
+        <div class="control-group">
+            <label for="a">Tasa de crecimiento (a): <span id="a-val">1.50</span></label>
+            <input type="range" id="a" min="0.1" max="8.0" step="0.1" value="1.5">
+        </div>
+        <div class="control-group">
+            <label for="b">Umbral de Allee (b): <span id="b-val">0.20</span></label>
+            <input type="range" id="b" min="0.01" max="0.99" step="0.01" value="0.2">
+        </div>
+        <div class="control-group">
+            <label for="n">Iteraciones (N): <span id="n-val">50</span></label>
+            <input type="range" id="n" min="10" max="200" step="5" value="50">
+        </div>
+    </div>
+
+    <div id="statusMessage" class="status-box"></div>
+
+    <div class="charts-container">
+        <div class="chart-box">
+            <h3 style="text-align: center; color: #2a5298;">Evolución Temporal de la Población</h3>
+            <div id="timeSeriesPlot" style="width:100%;height:400px;"></div>
+        </div>
+        <div class="chart-box">
+            <h3 style="text-align: center; color: #2a5298;">Efecto del parámetro "a" (Diagrama de Bifurcación)</h3>
+            <p style="text-align: center; font-size: 0.9em; color: #666;">Muestra hacia dónde tiende la población a largo plazo según la tasa de crecimiento 'a'. La línea roja vertical marca tu valor actual de 'a'.</p>
+            <div id="bifurcationPlot" style="width:100%;height:400px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables de estado
+    let x0 = 0.3;
+    let a = 1.5;
+    let b = 0.2;
+    let iterations = 50;
+    let bifurcationDataCache = null;
+
+    // Elementos del DOM
+    const x0Input = document.getElementById('x0');
+    const aInput = document.getElementById('a');
+    const bInput = document.getElementById('b');
+    const nInput = document.getElementById('n');
+    const statusMsg = document.getElementById('statusMessage');
+
+    // Función principal para actualizar todo
+    function updateSimulation() {
+        x0 = parseFloat(x0Input.value);
+        a = parseFloat(aInput.value);
+        b = parseFloat(bInput.value);
+        iterations = parseInt(nInput.value);
+
+        document.getElementById('x0-val').innerText = x0.toFixed(2);
+        document.getElementById('a-val').innerText = a.toFixed(2);
+        document.getElementById('b-val').innerText = b.toFixed(2);
+        document.getElementById('n-val').innerText = iterations;
+
+        drawTimeSeries();
+        drawBifurcation();
+    }
+
+    function setParams(newX0, newA, newB, newN) {
+        x0Input.value = newX0;
+        aInput.value = newA;
+        bInput.value = newB;
+        nInput.value = newN;
+        bifurcationDataCache = null;
+        updateSimulation();
+    }
+
+    // Calcular y dibujar serie temporal
+    function drawTimeSeries() {
+        let n_vals = [];
+        let x_vals = [];
+        let current_x = x0;
+        let cayo_negativo = false;
+
+        for (let i = 0; i <= iterations; i++) {
+            n_vals.push(i);
+            x_vals.push(current_x);
+            
+            // Si en algún momento cae por debajo de cero, lo registramos
+            if (current_x < 0) {
+                cayo_negativo = true;
+            }
+
+            current_x = current_x + a * current_x * (current_x - b) * (1 - current_x);
+            current_x = Math.max(-5, Math.min(5, current_x)); 
+        }
+
+        // --- NUEVA LÓGICA DE MENSAJES DINÁMICOS ---
+        let ultimo_valor = x_vals[x_vals.length - 1];
+        let penultimo_valor = x_vals[x_vals.length - 2];
+        let diferencia = Math.abs(ultimo_valor - penultimo_valor);
+
+        if (x0 < b) {
+            statusMsg.innerHTML = '⚠️ Población inicial por debajo del umbral de Allee. Tendencia: <b>Extinción determinista</b>.';
+            statusMsg.style.backgroundColor = '#fdeaea';
+            statusMsg.style.color = '#c0392b';
+        } else if (cayo_negativo || ultimo_valor <= 0) {
+            statusMsg.innerHTML = '💥 Crisis de frontera: Las fluctuaciones salvajes han provocado la <b>Extinción</b>.';
+            statusMsg.style.backgroundColor = '#fdeaea';
+            statusMsg.style.color = '#c0392b';
+        } else if (diferencia < 0.001) {
+            statusMsg.innerHTML = '✓ Régimen Estable: La población converge a la capacidad de carga.';
+            statusMsg.style.backgroundColor = '#eafaf1';
+            statusMsg.style.color = '#1e8449';
+        } else {
+            statusMsg.innerHTML = '🌀 Régimen Inestable: La población presenta <b>Oscilaciones o Caos</b>.';
+            statusMsg.style.backgroundColor = '#fef5e7';
+            statusMsg.style.color = '#d68910';
+        }
+        // ------------------------------------------
+
+        const trace1 = {
+            x: n_vals,
+            y: x_vals,
+            mode: 'lines+markers',
+            name: 'Población (x<sub>n</sub>)',
+            line: {color: '#2a5298', width: 2},
+            marker: {size: 6}
+        };
+
+        const layout = {
+            xaxis: { title: 'Iteración (n)' },
+            yaxis: { title: 'Población (x<sub>n</sub>)', autorange: true },
+            margin: { t: 20, b: 40, l: 50, r: 20 },
+            shapes: [
+                { type: 'line', x0: 0, x1: iterations, y0: b, y1: b, line: { color: '#e74c3c', width: 2, dash: 'dash' } },
+                { type: 'line', x0: 0, x1: iterations, y0: 1, y1: 1, line: { color: '#27ae60', width: 2, dash: 'dash' } },
+                { type: 'line', x0: 0, x1: iterations, y0: 0, y1: 0, line: { color: '#999', width: 1 } }
+            ]
+        };
+
+        Plotly.newPlot('timeSeriesPlot', [trace1], layout, {responsive: true});
+    }
+
+    // Calcular y dibujar diagrama de bifurcación
+    function drawBifurcation() {
+        if (!bifurcationDataCache || bifurcationDataCache.b !== b) {
+            let a_vals = [];
+            let x_asintotico = [];
+            
+            const aMin = 0.1;
+            const aMax = 8.0;
+            const aSteps = 300;
+            const transitorio = 200; 
+            const muestras = 50;     
+            
+            for (let i = 0; i <= aSteps; i++) {
+                let test_a = aMin + (i / aSteps) * (aMax - aMin);
+                let current_x = 0.5; 
+                
+                for (let j = 0; j < transitorio; j++) {
+                    current_x = current_x + test_a * current_x * (current_x - b) * (1 - current_x);
+                    current_x = Math.max(-5, Math.min(5, current_x));
+                }
+                
+                for (let j = 0; j < muestras; j++) {
+                    current_x = current_x + test_a * current_x * (current_x - b) * (1 - current_x);
+                    current_x = Math.max(-5, Math.min(5, current_x));
+                    
+                    // Ahora guardamos TODO, incluso los negativos o ceros
+                    a_vals.push(test_a);
+                    x_asintotico.push(current_x);
+                }
+            }
+            bifurcationDataCache = { a: a_vals, x: x_asintotico, b: b };
+        }
+
+        const trace = {
+            x: bifurcationDataCache.a,
+            y: bifurcationDataCache.x,
+            mode: 'markers',
+            type: 'scatter',
+            marker: { size: 2, color: '#2a5298', opacity: 0.2 },
+            hoverinfo: 'none'
+        };
+
+        const layout = {
+            xaxis: { title: 'Parámetro de crecimiento (a)', range: [0, 8] },
+            yaxis: { title: 'Población asintótica (x<sub>n</sub>)', autorange: true }, // Eje Y automático
+            margin: { t: 20, b: 40, l: 50, r: 20 },
+            shapes: [
+                { type: 'line', x0: a, x1: a, y0: -5, y1: 5, line: { color: '#e74c3c', width: 2 } },
+                { type: 'line', x0: 0, x1: 8, y0: 0, y1: 0, line: { color: '#999', width: 1, dash: 'dash' } } // Línea del 0
+            ]
+        };
+
+        Plotly.newPlot('bifurcationPlot', [trace], layout, {responsive: true});
+    }
+
+    x0Input.addEventListener('input', updateSimulation);
+    aInput.addEventListener('input', updateSimulation);
+    bInput.addEventListener('input', () => { bifurcationDataCache = null; updateSimulation(); });
+    nInput.addEventListener('input', updateSimulation);
+
+    updateSimulation();
+</script>
+
+</body>
+</html>
